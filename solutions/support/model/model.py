@@ -36,7 +36,19 @@ class ONNXModel:
         return not np.argmax(outputs[0][0]) and np.max(outputs[0][0]) > 0.9
 
     @staticmethod
-    def preprocess_image(image, target_size=(64, 64)):
+    def isolate_color(image, target_colors=((210, 53, 73), (211, 53, 73))):
+        pixels = image.load()
+
+        for y in range(image.height):
+            for x in range(image.width):
+                r, g, b, a = pixels[x, y]
+                if (r, g, b) in target_colors:
+                    continue
+                else:
+                    pixels[x, y] = (0, 0, 0, 0)
+        return image
+
+    def preprocess_image(self, image, target_size=(64, 64)):
         """
         Load and preprocess the image to match the model's input requirements.
 
@@ -47,18 +59,10 @@ class ONNXModel:
         Returns:
         - processed_image (numpy.ndarray): Preprocessed image ready for model input.
         """
+        image = self.isolate_color(image)
         image = image.resize(target_size)
         image_array = np.array(image).astype(np.float32)    # noqa
         image_array = np.transpose(image_array, (2, 0, 1))
         image_array /= 255.0
         image_array = np.expand_dims(image_array, axis=0)
         return image_array
-
-
-if __name__ == "__main__":
-    onnx_model = ONNXModel()
-    input_data = onnx_model.load_and_preprocess_image('true2.png')
-
-    for i in range(5):
-        output = onnx_model.infer(input_data)
-        print(f"Inference {i + 1} result:", output)
