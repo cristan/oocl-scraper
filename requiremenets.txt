@@ -1,0 +1,7 @@
+webdriver_manager
+selenium
+requests
+undetected_chromedriver
+onnxruntime
+numpy
+pillow

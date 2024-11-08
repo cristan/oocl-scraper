@@ -1,0 +1,10 @@
+venv
+.idea
+*.log
+__pycache__
+dataset.csv
+dataset
+data_collector.py
+*.exe
+.idea
+.wdm
