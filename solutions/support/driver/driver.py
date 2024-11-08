@@ -345,7 +345,7 @@ class Selenium:
         self.wait = WebDriverWait(self.driver, self.timeout)
         self.is_started = True
         self.is_running.set()
-        self.actions = ActionChains(self.driver)
+        self.actions = ActionChains(self.driver, duration=0)
         # shutil.rmtree(self._extension_dir, ignore_errors=True)
         logger.debug(f"[Selenium.start] {self._webdriver}.driver is ready to use!")
         self.driver.execute_script("navigator.webdriver = false;")

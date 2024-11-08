@@ -1,6 +1,7 @@
 import time
 from io import BytesIO
 
+import numpy as np
 from PIL import Image
 
 from solutions.support.driver import *
@@ -37,15 +38,43 @@ class Scraper(Selenium):
         input_data = self.model.preprocess_image(image)
         return self.model.infer(input_data)
 
+    def slide(self, x):
+        offset = 1 if x >= 0 else -1
+        for i in range(abs(x)):
+            self.actions.move_by_offset(offset, 0).perform()
+
+    @staticmethod
+    def generate_balanced_sequence(size=10, min_value=1, max_value=300, net_result=40):
+        numbers = []
+        cumulative_sum = 0
+
+        for _ in range(size - 1):
+            number = np.random.randint(min_value, max_value + 1)
+            if cumulative_sum + number > max_value:
+                number = -np.random.randint(min_value, min(cumulative_sum, max_value) + 1)
+            cumulative_sum += number
+            cumulative_sum = np.clip(cumulative_sum, min_value, max_value)
+            numbers.append(number)
+        last_number = net_result - cumulative_sum
+        last_number = np.clip(last_number, -max_value, max_value)
+        numbers.append(last_number)
+        return numbers
+
+    def play_with_slider(self):
+        numbers = self.generate_balanced_sequence(size=np.random.randint(4, 7))
+        print(numbers)
+        for d in numbers:
+            self.slide(d)
+
     def handle_captcha(self):
         slider = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@class="verify-move-block"]')))
         self.actions.click_and_hold(slider).perform()
+        self.slide(40)
         for i in range(120):
-            self.actions.move_by_offset(5, 0).perform()
+            self.slide(8)
             if self.detect():
                 self.actions.release(slider).perform()
                 break
-            time.sleep(0.1)
         input(">>>")
         return True
 
