@@ -46,6 +46,7 @@ class Scraper(Selenium):
                 self.actions.release(slider).perform()
                 break
             time.sleep(0.2)
+        input(">>>")
         return True
 
     def scrape_container(self):
