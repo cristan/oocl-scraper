@@ -37,6 +37,7 @@ class ONNXModel:
 
     @staticmethod
     def isolate_color(image, target_colors=((210, 53, 73), (211, 53, 73))):
+        image = image.convert('RGBA')
         pixels = image.load()
 
         for y in range(image.height):
@@ -46,7 +47,7 @@ class ONNXModel:
                     continue
                 else:
                     pixels[x, y] = (0, 0, 0, 0)
-        return image
+        return image.convert('RGB')
 
     def preprocess_image(self, image, target_size=(64, 64)):
         """

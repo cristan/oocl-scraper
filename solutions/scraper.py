@@ -33,7 +33,7 @@ class Scraper(Selenium):
 
     def detect(self):
         screenshot = self.find_element(By.ID, 'imgCanvas').screenshot_as_png
-        image = Image.open(BytesIO(screenshot)).convert('RGB')
+        image = Image.open(BytesIO(screenshot))
         input_data = self.model.preprocess_image(image)
         return self.model.infer(input_data)
 
