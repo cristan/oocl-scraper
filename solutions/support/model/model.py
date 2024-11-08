@@ -33,7 +33,7 @@ class ONNXModel:
             input_data = np.array(input_data)
         outputs = self.session.run(None, {self.input_name: input_data})
         print(not np.argmax(outputs[0][0]), np.max(outputs[0][0]))
-        return not np.argmax(outputs[0][0]) and np.max(outputs[0][0]) > 0.8
+        return not np.argmax(outputs[0][0]) and np.max(outputs[0][0]) > 0.9
 
     @staticmethod
     def preprocess_image(image, target_size=(64, 64)):
