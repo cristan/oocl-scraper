@@ -41,7 +41,7 @@ class Scraper(Selenium):
         slider = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@class="verify-move-block"]')))
         self.actions.click_and_hold(slider).perform()
         for i in range(120):
-            self.actions.move_by_offset(2, 0).perform()
+            self.actions.move_by_offset(5, 0).perform()
             if self.detect():
                 self.actions.release(slider).perform()
                 break

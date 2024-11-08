@@ -61,6 +61,8 @@ class ONNXModel:
         - processed_image (numpy.ndarray): Preprocessed image ready for model input.
         """
         image = self.isolate_color(image)
+        image.show()
+        input(">>>")
         image = image.resize(target_size)
         image_array = np.array(image).astype(np.float32)    # noqa
         image_array = np.transpose(image_array, (2, 0, 1))
