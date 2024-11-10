@@ -4,4 +4,6 @@ requests
 undetected_chromedriver
 onnxruntime
 numpy
+pyautogui
+opencv-python
 pillow
