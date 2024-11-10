@@ -7,3 +7,5 @@ numpy
 pyautogui
 opencv-python
 pillow
+pywin32
+pyautogui

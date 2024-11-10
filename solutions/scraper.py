@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-from mytools.common.keyboard import Keyboard
 from solutions.support.driver import *
 from solutions.support.driver.wind_mouse import wind_mouse
 from solutions.support.model import ONNXModel
@@ -127,5 +126,4 @@ class Scraper(Selenium):
     def __call__(self, *args, **kwargs):
         self.auto = Auto()
         self.model = ONNXModel()
-        self.keyboard = Keyboard()
         self.scrape_container()
