@@ -57,7 +57,7 @@ class Scraper(Selenium):
         else:
             new_pos = start_pos[0] + x, start_pos[1] - np.random.randint(5, 20)
         points = wind_mouse(*start_pos, *new_pos)
-        points[-1] = [x, 0]
+        points[-1] = [new_pos[0], start_pos[1]]
         rel_points = self.relative_positions(start_pos, points)
         for point in rel_points:
             self.auto.auto.moveRel(*point)
@@ -107,8 +107,9 @@ class Scraper(Selenium):
             if self.detect():
                 self.auto.auto.mouseUp()
                 break
-        input(">>>")
-        return True
+        return self.multiWait(
+            [(By.XPATH, "//*")]
+        )
 
     def scrape_container(self):
         self.initiate_search()
