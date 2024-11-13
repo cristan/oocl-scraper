@@ -60,17 +60,9 @@ class ONNXModel:
         Returns:
         - processed_image (numpy.ndarray): Preprocessed image ready for model input.
         """
-        image = self.isolate_color(image)
-        image = image.resize(target_size)
+        image = self.isolate_color(image).resize(target_size)
         image_array = np.array(image).astype(np.float32)    # noqa
         image_array = np.transpose(image_array, (2, 0, 1))
         image_array /= 255.0
         image_array = np.expand_dims(image_array, axis=0)
         return image_array
-
-
-if __name__ == '__main__':
-    model = ONNXModel()
-    image = Image.open("false.png")
-    input_data = model.preprocess_image(image)
-    print(model.infer(input_data))

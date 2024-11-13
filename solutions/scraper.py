@@ -1,12 +1,12 @@
-import sys
+import csv
+import random
 import time
 from io import BytesIO
 from pathlib import Path
 
-import numpy as np
 from PIL import Image
+
 from solutions.support.driver import *
-from solutions.support.driver.wind_mouse import wind_mouse
 from solutions.support.model import ONNXModel
 
 
@@ -40,76 +40,27 @@ class Scraper(Selenium):
         input_data = self.model.preprocess_image(image)
         return self.model.infer(input_data)
 
-    @staticmethod
-    def relative_positions(start_pos, points):
-        start_pos = np.array(start_pos)
-        points = np.array(points)
-        relative_points = np.zeros_like(points)
-        relative_points[0] = points[0] - start_pos
-        for i in range(1, len(points)):
-            relative_points[i] = points[i] - points[i - 1]
-        return relative_points
-
     def slide(self, x):
-        start_pos = self.auto.auto.position()
-        if np.random.choice([True, False]):
-            new_pos = start_pos[0] + x, start_pos[1] + np.random.randint(5, 20)
-        else:
-            new_pos = start_pos[0] + x, start_pos[1] - np.random.randint(5, 20)
-        points = wind_mouse(*start_pos, *new_pos)
-        points[-1] = [new_pos[0], start_pos[1]]
-        rel_points = self.relative_positions(start_pos, points)
-        for point in rel_points:
-            self.auto.auto.moveRel(*point)
-
-    @staticmethod
-    def generate_balanced_sequence(size=10, min_value=1, max_value=300, net_result=40):
-        numbers = []
-        cumulative_sum = 0
-
-        for _ in range(size - 1):
-            number = np.random.randint(min_value, max_value + 1)
-            if cumulative_sum + number > max_value:
-                number = -np.random.randint(min_value, min(cumulative_sum, max_value) + 1)
-            cumulative_sum += number
-            cumulative_sum = np.clip(cumulative_sum, min_value, max_value)
-            numbers.append(number)
-        last_number = net_result - cumulative_sum
-        last_number = np.clip(last_number, -max_value, max_value)
-        numbers.append(last_number)
-        return numbers
-
-    def play_with_slider(self):
-        numbers = self.generate_balanced_sequence(size=np.random.randint(4, 7))
-        print(numbers)
-        for d in numbers:
-            self.slide(d)
-
-    def find_slider_image(self):
-        slider_path = str(Path(__file__).resolve().parent / 'images' / 'slider.png')
-        try:
-            slider_location = self.auto.auto.locateCenterOnScreen(slider_path, confidence=0.7)
-        except self.auto.auto.ImageNotFoundException:
-            print("Slider image expires. Please capture a new image.")
-            input(">>>")
-            sys.exit()
-        else:
-            return slider_location
+        y = random.choice([1, -1]) * random.randint(10, 25)
+        self.move_human(x=x, y=y)
 
     def handle_captcha(self):
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@class="verify-move-block"]')))
-        pos = self.find_slider_image()
-        self.auto.auto.moveTo(*pos)
-        self.auto.auto.mouseDown()
+        slider = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@class="verify-move-block"]')))
+        self.move_human(slider)
+        self.actions.click_and_hold(slider).perform()
         self.slide(100)
         for i in range(32):
-            self.slide(20)
+            self.slide(10)
             if self.detect():
-                self.auto.auto.mouseUp()
+                self.actions.release(slider).perform()
                 break
-        return self.multiWait(
-            [(By.XPATH, "//*")]
-        )
+        return self.multiWait([
+            (By.XPATH, '//*[text()="Validation failed"]'),
+            (By.XPATH, '//*[text()="Cargo Tracking"]')
+        ])
+
+    def _scrape(self):
+        self
 
     def scrape_container(self):
         self.initiate_search()
@@ -118,13 +69,43 @@ class Scraper(Selenium):
         if self.multiWait(
                 [
                     (By.ID, 'imgCanvas'),
-
+                    (By.XPATH, '//*[text()="Cargo Tracking"]'),
                 ]
         ) == 0:
-            self.handle_captcha()
+            if not self.handle_captcha():
+                raise Exception("Captcha not solved.")
+        self._scrape()
         return True
 
+    def move_to_lower_right_corner(self):
+        """Move to lower right corner to avoid mouse binding with captcha."""
+        screen_width, screen_height = self.auto.auto.size()
+        self.auto.auto.moveTo(screen_width - 1, screen_height - 1)
+
+    @staticmethod
+    def read_csv(filename):
+        with open(filename, mode='r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader, None)
+            return [row[0] for row in reader if row]
+
+    def write_csv(self, data):
+        with open(self.OUTPUT_CSV_FILENAME, mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=list(data.keys())) # noqa
+            writer.writeheader() if self.OUTPUT_CSV_FILENAME.stat().st_size == 0 else None
+            writer.writerow(data)
+
+    def get_new(self):
+        if self.OUTPUT_CSV_FILENAME.exists():
+            output_csv = self.read_csv(self.OUTPUT_CSV_FILENAME)
+        input_csv = self.read_csv(self.INPUT_CSV_FILENAME)
+
+
     def __call__(self, *args, **kwargs):
+        self.INPUT_CSV_FILENAME = Path(args[0]).resolve()
+        self.OUTPUT_CSV_FILENAME = Path(args[1]).resolve()
+
         self.auto = Auto()
+        self.move_to_lower_right_corner()
         self.model = ONNXModel()
         self.scrape_container()
