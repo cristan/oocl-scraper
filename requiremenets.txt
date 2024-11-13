@@ -10,4 +10,3 @@ pillow
 pywin32
 pyautogui
 bs4
-lxml

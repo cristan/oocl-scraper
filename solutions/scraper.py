@@ -61,6 +61,25 @@ class Scraper(Selenium):
         ])
 
     @staticmethod
+    def scrape_containers_table(soup):
+        table = soup.find('table', {'id': 'summaryTable'})
+        tbody_rows = table.find('tbody').find_all('tr')
+        table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tbody_rows[2].find_all('td')]
+        return {
+            'container_number': table_data[0],
+            'container_size_type': table_data[1],
+            'quantity': table_data[2],
+            'gross_weight': table_data[3],
+            'verified_gross_mass': table_data[4],
+            'latest_event': {
+                'event': table_data[5],
+                'location': table_data[6],
+                'time': table_data[7],
+            },
+            'final_destination': table_data[8],
+        }
+
+    @staticmethod
     def scrape_detention_table(soup):
         table = soup.find('table', {'id': 'dndTable'})
         tbody_rows = table.find('tbody').find_all('tr')
@@ -110,28 +129,9 @@ class Scraper(Selenium):
         }
 
     @staticmethod
-    def scrape_containers_table(soup):
-        table = soup.find('table', {'id': 'summaryTable'})
-        tbody_rows = table.find('tbody').find_all('tr')
-        table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tbody_rows[-1].find_all('td')]
-        return {
-            'container_number': table_data[0],
-            'container_size_type': table_data[1],
-            'quantity': table_data[2],
-            'gross_weight': table_data[3],
-            'verified_gross_mass': table_data[4],
-            'latest_event': {
-                'event': table_data[5],
-                'location': table_data[6],
-                'time': table_data[7],
-            },
-            'final_destination': table_data[8],
-        }
-
-    @staticmethod
     def scrape_equipment_activities_table(soup):
         data = []
-        table = soup.find('table', {'id': 'eventListTable'})
+        table = soup.find('div', {'id': 'Tab2'}).find('table', {'id': 'eventListTable'})
         tbody_rows = table.find('tbody').find_all('tr')
         for tr in tbody_rows[1:]:
             table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tr.find_all('td')]
@@ -149,7 +149,7 @@ class Scraper(Selenium):
 
     def _scrape(self, container_number):
         content = self.driver.page_source
-        soup = BeautifulSoup(content, features="lxml")
+        soup = BeautifulSoup(content, features="html.parser")
 
         return {
             'containers': self.scrape_containers_table(soup),
@@ -182,8 +182,9 @@ class Scraper(Selenium):
             try:
                 self.scrape_container(item)
             except (Exception,) as e:
-                raise e
                 self.spider.update_status(i, 'INITIAL', data)
+                if e.msg == 'Captcha not solved.':
+                    raise e
             else:
                 self.spider.delete_object(i, data)
 

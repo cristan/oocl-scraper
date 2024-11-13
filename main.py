@@ -1,16 +1,29 @@
 from solutions import Scraper
 import logging
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s: %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("scraper.log", "w", "utf-8")
-    ]
-)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logfile = f"logs/oocl_scraping_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.log"
+os.makedirs(os.path.dirname(logfile), exist_ok=True)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_format = logging.Formatter('[%(asctime)s] %(message)s', datefmt='%H:%M:%S')
+console_handler.setFormatter(console_format)
+
+file_handler = logging.FileHandler(logfile, mode='w', encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+file_format = logging.Formatter('[%(asctime)s] %(levelname)s:%(name)s:%(funcName)s:%(lineno)d %(message)s',
+                                datefmt='%Y-%m-%d %H:%M:%S')
+file_handler.setFormatter(file_format)
+
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+logging.getLogger('uc').setLevel(logging.WARNING)
+logging.getLogger('undetected_chromedriver').setLevel(logging.WARNING)
+logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
+logging.getLogger('solutions.support.driver.driver').setLevel(logging.WARNING)
 
 MAXIMUM_RETRIES = 3
 INPUT_FILENAME = "./ToScrape/oocl.json"
