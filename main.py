@@ -13,8 +13,8 @@ logging.basicConfig(
 )
 
 MAXIMUM_RETRIES = 3
-INPUT_CSV_FILENAME = "containers.csv"
-OUTPUT_CSV_FILENAME = "scraped-containers.csv"
+INPUT_FILENAME = "./ToScrape/oocl.json"
+OUTPUT_FILENAME = "./Outputs/oocl.json"
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
             logger.info("Starting attempt %d", attempt + 1)
             scraper = Scraper("uc", start=True)
             try:
-                scraper(INPUT_CSV_FILENAME, OUTPUT_CSV_FILENAME)
+                scraper(INPUT_FILENAME, OUTPUT_FILENAME)
             except Exception as e:
                 logger.error("Error occurred during scraper execution on attempt %d: %s", attempt + 1, e)
             else:

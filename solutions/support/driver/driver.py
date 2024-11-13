@@ -400,7 +400,6 @@ class Selenium:
             except MoveTargetOutOfBoundsException:
                 pass
         self.current_position = (x, y)
-        print(self.current_position)
 
     def click_human(self, element=None, x=None, y=None, action_click=True, delay=0.1):
         """

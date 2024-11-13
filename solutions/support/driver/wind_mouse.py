@@ -53,5 +53,4 @@ def relative_points(start_pos, dst_pos, points):
     for i in range(2, len(points)): # noqa
         rel_points[i] = points[i] - points[i - 1]   # noqa
     rel_points = np.append(rel_points, [(dst_pos - start_pos) - np.sum(rel_points, axis=0)], axis=0)
-    print(np.sum(rel_points, axis=0))
     return rel_points.astype(int)

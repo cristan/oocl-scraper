@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import pyautogui
+pyautogui.FAILSAFE = False
 
 from .delays import Delay
 
