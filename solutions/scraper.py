@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 import time
@@ -11,11 +12,14 @@ from solutions.spider import Spider
 from solutions.support.driver import *
 from solutions.support.model import ONNXModel
 
+logger = logging.getLogger(__name__)
+
 
 class Scraper(Selenium):
     URL = "https://www.oocl.com/eng/ourservices/eservices/cargotracking/Pages/cargotracking.aspx"
 
     def initiate_search(self, container_number):
+        logger.info(f"Initiating search for container: {container_number}")
         self.get(self.URL)
 
         timeout = 60
@@ -23,29 +27,37 @@ class Scraper(Selenium):
         for i in range(timeout):
             try:
                 if self.find_element(By.ID, 'allowAll'):
+                    logger.info("Clicking on 'Allow All' button.")
                     self.click_js((By.ID, 'allowAll'))
-
+                logger.info("Selecting cargo type 'Container ID'.")
                 Select(self.find_element(By.ID, 'ooclCargoSelector')).select_by_value('cont')
                 self.find_element(By.ID, 'SEARCH_NUMBER').send_keys(container_number)
                 self.click_js((By.ID, 'container_btn'))
-            except (Exception,):
+            except Exception as e:
+                logger.warning(f"Exception occurred: {e}. Retrying... ({i + 1}/{timeout})")
                 time.sleep(1)
             else:
+                logger.info("Search initiated successfully.")
                 break
-        if i == timeout - 1:
-            raise Exception(f"Page failed to load in {i + 1} seconds.")
+        else:
+            raise Exception(f"Page failed to load in {timeout} seconds.")
 
     def detect(self):
+        logger.info("Detecting captcha result.")
         screenshot = self.find_element(By.ID, 'imgCanvas').screenshot_as_png
         image = Image.open(BytesIO(screenshot))
         input_data = self.model.preprocess_image(image)
-        return self.model.infer(input_data)
+        result = self.model.infer(input_data)
+        logger.info(f"Captcha detection result: {result}")
+        return result
 
     def slide(self, x):
         y = random.choice([1, -1]) * random.randint(10, 25)
+        logger.debug(f"Sliding captcha slider by (x={x}, y={y}).")
         self.move_human(x=x, y=y)
 
     def handle_captcha(self):
+        logger.info("Handling captcha.")
         slider = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@class="verify-move-block"]')))
         self.move_human(slider)
         self.actions.click_and_hold(slider).perform()
@@ -53,15 +65,23 @@ class Scraper(Selenium):
         for i in range(24):
             self.slide(10)
             if self.detect():
+                logger.info("Captcha solved.")
                 break
         self.actions.release(slider).perform()
-        return self.multiWait([
+
+        result_index = self.multiWait([
             (By.XPATH, '//*[text()="Validation failed"]'),
             (By.XPATH, '//*[text()="Cargo Tracking"]')
         ])
+        if result_index == 0:
+            logger.error("Captcha validation failed.")
+        else:
+            logger.info("Captcha validation successful.")
+        return result_index
 
     @staticmethod
     def scrape_containers_table(soup):
+        logger.info("Scraping containers table.")
         table = soup.find('table', {'id': 'summaryTable'})
         tbody_rows = table.find('tbody').find_all('tr')
         table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tbody_rows[2].find_all('td')]
@@ -81,6 +101,7 @@ class Scraper(Selenium):
 
     @staticmethod
     def scrape_detention_table(soup):
+        logger.info("Scraping detention table.")
         table = soup.find('table', {'id': 'dndTable'})
         tbody_rows = table.find('tbody').find_all('tr')
         table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tbody_rows[-1].find_all('td')]
@@ -112,6 +133,7 @@ class Scraper(Selenium):
 
     @staticmethod
     def scrape_routing_table(soup):
+        logger.info("Scraping routing table.")
         table = soup.find('table', {'id': 'eventListTable'})
         tbody_rows = table.find('tbody').find_all('tr')
         table_data = [re.sub(r'(\n|\t)+', '\\n', element.text.strip()) for element in tbody_rows[-1].find_all('td')]
@@ -130,6 +152,7 @@ class Scraper(Selenium):
 
     @staticmethod
     def scrape_equipment_activities_table(soup):
+        logger.info("Scraping equipment activities table.")
         data = []
         table = soup.find('div', {'id': 'Tab2'}).find('table', {'id': 'eventListTable'})
         tbody_rows = table.find('tbody').find_all('tr')
@@ -148,9 +171,9 @@ class Scraper(Selenium):
         return data
 
     def _scrape(self, container_number):
+        logger.info(f"Scraping data for container number {container_number}.")
         content = self.driver.page_source
         soup = BeautifulSoup(content, features="html.parser")
-
         return {
             'containers': self.scrape_containers_table(soup),
             'routing': self.scrape_routing_table(soup),
@@ -162,7 +185,6 @@ class Scraper(Selenium):
         container_number = item['container_number']
         self.initiate_search(container_number)
         self.driver.switch_to.window(self.driver.window_handles[-1])
-
         if self.multiWait(
                 [
                     (By.ID, 'imgCanvas'),
@@ -170,26 +192,29 @@ class Scraper(Selenium):
                 ]
         ) == 0:
             if not self.handle_captcha():
+                logger.error("Captcha not solved.")
                 raise Exception("Captcha not solved.")
-
         data = self._scrape(container_number)
         self.spider.write_output(data)
 
     def scrape_containers(self):
+        logger.info("Starting to scrape containers.")
         data = self.spider.read_data()
         for i, item in enumerate(data):
             self.spider.update_status(i, 'SCRAPING', data)
             try:
                 self.scrape_container(item)
-            except (Exception,) as e:
+            except Exception as e:
+                logger.error(f"Exception occurred while scraping container: {e}")
                 self.spider.update_status(i, 'INITIAL', data)
-                if e.msg == 'Captcha not solved.':
+                if str(e) == 'Captcha not solved.':
                     raise e
             else:
                 self.spider.delete_object(i, data)
 
     def move_to_lower_right_corner(self):
         """Move to lower right corner to avoid mouse binding with captcha."""
+        logger.info("Moving mouse to lower right corner.")
         screen_width, screen_height = self.auto.auto.size()
         self.auto.auto.moveTo(screen_width - 1, screen_height - 1)
 
