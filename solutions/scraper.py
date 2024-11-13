@@ -62,8 +62,8 @@ class Scraper(Selenium):
         self.move_human(slider)
         self.actions.click_and_hold(slider).perform()
         self.slide(50)
-        for i in range(24):
-            self.slide(10)
+        for i in range(35):
+            self.slide(7)
             if self.detect():
                 logger.info("Captcha solved.")
                 break
@@ -187,7 +187,7 @@ class Scraper(Selenium):
         self.driver.switch_to.window(self.driver.window_handles[-1])
         if self.multiWait(
                 [
-                    (By.ID, 'imgCanvas'),
+                    {'ec': EC.visibility_of_element_located((By.XPATH, '//*[@class="verify-move-block"]'))},
                     (By.XPATH, '//*[text()="Cargo Tracking"]'),
                 ]
         ) == 0:
@@ -200,17 +200,18 @@ class Scraper(Selenium):
     def scrape_containers(self):
         logger.info("Starting to scrape containers.")
         data = self.spider.read_data()
-        for i, item in enumerate(data):
-            self.spider.update_status(i, 'SCRAPING', data)
+        while data:
+            item = data[0]
+            self.spider.update_status(0, 'SCRAPING', data)
             try:
                 self.scrape_container(item)
             except Exception as e:
                 logger.error(f"Exception occurred while scraping container: {e}")
-                self.spider.update_status(i, 'INITIAL', data)
+                self.spider.update_status(0, 'INITIAL', data)
                 if str(e) == 'Captcha not solved.':
                     raise e
             else:
-                self.spider.delete_object(i, data)
+                self.spider.delete_object(0, data)
 
     def move_to_lower_right_corner(self):
         """Move to lower right corner to avoid mouse binding with captcha."""
