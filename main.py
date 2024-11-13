@@ -1,5 +1,8 @@
-from solutions import Scraper
+import datetime
 import logging
+import os
+
+from solutions import Scraper
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
