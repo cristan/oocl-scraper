@@ -37,7 +37,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
-from .proxy import Proxy
+try:
+    from .proxy import Proxy
+except ImportError:
+    pass
 
 logging.getLogger('selenium').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -88,7 +91,7 @@ class Selenium:
             webdriver_name: str = "chrome",
             user_data_dir: Union[str, Path] = None,
             incognito: bool = False,
-            proxy: Proxy = None,
+            proxy=None,
             headless: bool = False,
             headless2: bool = False,
             remove_images: bool = False,
@@ -160,7 +163,7 @@ class Selenium:
             f.write(datetime.now().strftime('%y/%m/%d'))
 
     def _install_webdriver(self):
-        if self._driver_executable_path.exists():
+        if not self._driver_executable_path.exists():
             logger.info("Driver not found. Downloading a new one ...")
             self._install_chromedriver()
             logger.info("Chromedriver downloaded.")
@@ -180,36 +183,37 @@ class Selenium:
     def _init_options(self):
         """ Initialize Options class using given params """
         logger.debug("Compiling options ...")
-        self._options = Options()
-        self._options.add_argument(self._proxy.chrome_proxy) if self._proxy else None
-        self._options.add_argument(f"--user-agent={self._user_agent}") if self._user_agent else None
-        self._options.add_argument("--headless=new") if self._headless2 else None
-        self._options.add_argument("--blink-settings=imagesEnabled=false") if self._remove_images else None
-        self._options.add_argument("--headless") if self._headless and not self._headless2 else None
-        self._options.add_argument(f"--user-data-dir={self._user_data_dir}") if self._user_data_dir else None
-        self._options.add_argument("--incognito") if self._incognito else ''
-        self._options.add_argument(f"--force-device-scale-factor={self._zoom} --high-dpi-support={self._zoom}") \
+        options = Options()
+        options.add_argument(self._proxy.chrome_proxy) if self._proxy else None
+        options.add_argument(f"--user-agent={self._user_agent}") if self._user_agent else None
+        options.add_argument("--headless=new") if self._headless2 else None
+        options.add_argument("--blink-settings=imagesEnabled=false") if self._remove_images else None
+        options.add_argument("--headless") if self._headless and not self._headless2 else None
+        options.add_argument(f"--user-data-dir={self._user_data_dir}") if self._user_data_dir else None
+        options.add_argument("--incognito") if self._incognito else ''
+        options.add_argument(f"--force-device-scale-factor={self._zoom} --high-dpi-support={self._zoom}") \
             if self._zoom is not None else ''
-        [self._options.add_argument(arg) for arg in self._args]
-        [self._options.add_extension(ext) for ext in self._extensions]
-        self._options.page_load_strategy = "none" if not self._load_full else 'normal'
+        [options.add_argument(arg) for arg in self._args]
+        [options.add_extension(ext) for ext in self._extensions]
+        options.page_load_strategy = "none" if not self._load_full else 'normal'
 
         # Chrome specific options
         if self._webdriver == 'chrome':
             user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                          'Chrome/68.0.3440.84 Safari/537.36'
-            self._options.add_argument("--hide-scrollbars")
-            self._options.add_argument(f"user-agent={user_agent}") if self._headless or self._headless2 else None
-            self._options.add_argument("--disable-infobars")
-            self._options.add_argument("--disable-notifications")
-            self._options.add_argument('--no-sandbox')
-            self._options.add_argument('--disable-application-cache')
-            self._options.add_argument('--disable-gpu')
-            self._options.add_argument("--start-maximized")
-            self._options.add_argument("--disable-dev-shm-usage")
-            self._options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            self._options.add_experimental_option('useAutomationExtension', False)
-            self._options.add_experimental_option("prefs", {"profile.default_content_setting_values.popups": 1, })
+            options.add_argument("--hide-scrollbars")
+            options.add_argument(f"user-agent={user_agent}") if self._headless or self._headless2 else None
+            options.add_argument("--disable-infobars")
+            options.add_argument("--disable-notifications")
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-application-cache')
+            options.add_argument('--disable-gpu')
+            options.add_argument("--start-maximized")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            options.add_experimental_option("prefs", {"profile.default_content_setting_values.popups": 1, })
+        return options
 
     def start(self):
         """ Start webdriver (uc, webdriver, seleniumBase) """
