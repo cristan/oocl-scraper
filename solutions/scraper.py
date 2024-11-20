@@ -34,7 +34,7 @@ class Scraper(Selenium):
                 self.find_element(By.ID, 'SEARCH_NUMBER').send_keys(container_number)
                 self.click_js((By.ID, 'container_btn'))
             except Exception as e:
-                logger.warning(f"Exception occurred: {e}. Retrying... ({i + 1}/{timeout})")
+                logger.debug(f"Exception occurred: {e}. Retrying... ({i + 1}/{timeout})")
                 time.sleep(1)
             else:
                 logger.info("Search initiated successfully.")
